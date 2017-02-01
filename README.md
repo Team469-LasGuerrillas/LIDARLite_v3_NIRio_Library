@@ -4,20 +4,13 @@
 * [Operating Manual and Technical Specifications](http://static.garmin.com/pumac/LIDAR_Lite_v3_Operation_Manual_and_Technical_Specifications.pdf)
 
 This library provides quick access to all the basic functions of LIDAR-Lite
-via the Arduino interface. Additionally, it can provide a user of any
-platform with a template for their own application code.
+via the National Instruments RoboRio I2c interface.
 
 For detailed specifications, pinout, and connection diagrams, see the manual linked above.
 
-***A Note on Compatibility:*** *Minor interface changes have occurred between LIDAR-Lite v3 and previous versions. Backwards-compatibility of this library is largely preserved, but support is not directly provided for v1 and v2.*
+**Note:**This library was forked from the Arudiono library available here. [https://github.com/garmin/LIDARLite_v3_Arduino_Library](https://github.com/garmin/LIDARLite_v3_Arduino_Library)
 
-## Installation instructions
-To install, download this repository and place in your Arduino libraries folder or use the Arduino Library Manager. If you need help, follow the instructions here: [http://arduino.cc/en/Guide/Libraries](http://arduino.cc/en/Guide/Libraries).
-
-## Example Sketches
-### GetDistancePWM
-This is the simplest demonstration of LIDAR-Lite. It shows how to read a distance using the PWM interface.
-
+## Example Code
 ### GetDistanceI2c
 This demonstration shows how to read distance using the I2C interface and choose preset configurations.
 
