@@ -48,13 +48,16 @@ namespace frc {
  */
 
 class LIDARLite_I2C : public LiveWindowSendable {
- protected:
+
+ public:
   static const int kAddress = 0x62;
+
+ protected:
   static const int kStatusRegister = 0x01;
   static const int kDistanceRegister = 0x8f;
 
  public:
-  explicit LIDARLite_I2C(I2C::Port port, int deviceAddress = kAddress, int configuration = 0);
+  LIDARLite_I2C(I2C::Port port, int deviceAddress = kAddress, int configuration = 0);
   virtual ~LIDARLite_I2C() = default;
 
   LIDARLite_I2C(const LIDARLite_I2C&) = delete;

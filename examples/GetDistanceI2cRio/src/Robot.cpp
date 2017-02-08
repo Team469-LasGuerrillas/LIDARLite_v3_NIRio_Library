@@ -7,7 +7,9 @@
 #include <SmartDashboard/SendableChooser.h>
 #include <SmartDashboard/SmartDashboard.h>
 
-#include "LIDARLiteRio.h"
+#include <I2C.h>
+#include <LIDARLiteRio.h>
+
 
 class Robot: public frc::IterativeRobot {
 public:
@@ -18,8 +20,8 @@ public:
 	}
 
 	void RobotPeriodic(){
-		SmartDashboard::PutNumber("nonbias_distance", lidar.distance(true));
-		SmartDashboard::PutNumber("bias_distance", lidar.distance(false));
+		SmartDashboard::PutNumber("nonbias_distance", lidar->distance(true));
+		SmartDashboard::PutNumber("bias_distance", lidar->distance(false));
 	}
 
 	/*
@@ -68,7 +70,7 @@ public:
 private:
 	frc::LiveWindow* lw = LiveWindow::GetInstance();
 	frc::SendableChooser<std::string> chooser;
-	frc::LIDARLite_I2C lidar = frc::LIDARLite_I2C(frc::I2C::kMXP, frc::LIDARLite_I2C::kAddress, 0);
+	frc::LIDARLite_I2C * lidar = new frc::LIDARLite_I2C(frc::I2C::kMXP, frc::LIDARLite_I2C::kAddress, 0);
 	const std::string autoNameDefault = "Default";
 	const std::string autoNameCustom = "My Auto";
 	std::string autoSelected;

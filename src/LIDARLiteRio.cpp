@@ -27,7 +27,7 @@ const int LIDARLite_I2C::kDistanceRegister;
     operating manual for instructions.
   configuration: Default 0. Selects one of several preset configurations.
 ------------------------------------------------------------------------------*/
-LIDARLite_I2C::LIDARLite_I2C(I2C::Port port, int deviceAddress, int configuration) 
+LIDARLite_I2C::LIDARLite_I2C(I2C::Port port, int deviceAddress, int configuration)
     : m_i2c(port, deviceAddress)
 {
   configure(configuration);
