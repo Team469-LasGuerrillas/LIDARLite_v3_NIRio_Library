@@ -14,6 +14,13 @@ using namespace frc;
 const int LIDARLite_I2C::kAddress;
 const int LIDARLite_I2C::kStatusRegister;
 const int LIDARLite_I2C::kDistanceRegister;
+const int LIDARLite_I2C::kStatusFlag_Busy;
+const int LIDARLite_I2C::kStatusFlag_ReferenceOverflow;
+const int LIDARLite_I2C::kStatusFlag_SignalOverflow;
+const int LIDARLite_I2C::kStatusFlag_InvalidSignal;
+const int LIDARLite_I2C::kStatusFlag_SecondaryReturn;
+const int LIDARLite_I2C::kStatusFlag_Health;
+const int LIDARLite_I2C::kStatusFlag_ProcessError;
 
 /*------------------------------------------------------------------------------
   Constructor
@@ -30,7 +37,16 @@ const int LIDARLite_I2C::kDistanceRegister;
 LIDARLite_I2C::LIDARLite_I2C(I2C::Port port, int deviceAddress, int configuration)
     : m_i2c(port, deviceAddress)
 {
-  configure(configuration);
+	deviceBusy = 0;
+	referenceOverflow = 0;
+	signalOverflow = 0;
+	invalidSignal = 0;
+	secondaryReturnValid = 0;
+	sensorHealth = 0;
+	processError = 0;
+	status = 0x0;
+	reset();
+	configure(configuration);
 }/* LIDARLite_I2C Constructor */
 
 /*------------------------------------------------------------------------------
@@ -104,6 +120,16 @@ void LIDARLite_I2C::reset(){
   m_i2c.Write(0x00, 0x00);
 } /* LIDARLite_I2C::reset */
 
+void LIDARLite_I2C::updateStatus(){
+	deviceBusy = getBit(status, kStatusFlag_Busy);
+	referenceOverflow = getBit(status, kStatusFlag_ReferenceOverflow);
+	signalOverflow = getBit(status, kStatusFlag_SignalOverflow);
+	invalidSignal = getBit(status, kStatusFlag_InvalidSignal);
+	secondaryReturnValid = getBit(status, kStatusFlag_SecondaryReturn);
+	sensorHealth = getBit(status, kStatusFlag_Health);
+	processError = getBit(status, kStatusFlag_ProcessError);
+}
+
 /*------------------------------------------------------------------------------
   Distance
 
@@ -139,7 +165,7 @@ int LIDARLite_I2C::distance(bool biasCorrection){
     m_i2c.Write(0x00,0x03);
   }
   // Array to store high and low bytes of distance
-  byte distanceArray[2];
+  uint8_t distanceArray[2];
 
   // Read two bytes from register 0x8f (autoincrement for reading 0x0f and 0x10)
   read(kDistanceRegister, 2, distanceArray, true);
@@ -165,7 +191,7 @@ int LIDARLite_I2C::distance(bool biasCorrection){
   monitorBusyFlag: if true, the routine will repeatedly read the status
     register until the busy flag (LSB) is 0.
 ------------------------------------------------------------------------------*/
-void LIDARLite_I2C::read(int myAddress, int numOfBytes, byte* arrayToSave, bool monitorBusyFlag){
+void LIDARLite_I2C::read(int myAddress, int numOfBytes, uint8_t * arrayToSave, bool monitorBusyFlag){
   //Unlike the arduino library, busyMonitor will be used to monitor our state instead
   //of just whether we are or are not ready with results
   int busyMonitor = 0; //busyFlag monitors for when the device is done with a measurement
@@ -175,11 +201,11 @@ void LIDARLite_I2C::read(int myAddress, int numOfBytes, byte* arrayToSave, bool 
 
   while(busyMonitor >= 0){
     //pull in the status register
-    uint8_t test_byte;
-    m_i2c.Read(LIDARLite_I2C::kStatusRegister, 1, &test_byte);
-
+	lidar_read(LIDARLite_I2C::kStatusRegister, &status, 1);
+    //m_i2c.Read(LIDARLite_I2C::kStatusRegister, 1, &status);
+    updateStatus();
     //if the LSB is 0, then the reading is correct
-    if(!getBit(test_byte, 0)){
+    if(deviceBusy == 0){
       busyMonitor = 0;
     }
     //Subtract 1
@@ -187,14 +213,34 @@ void LIDARLite_I2C::read(int myAddress, int numOfBytes, byte* arrayToSave, bool 
   }
 
   if(busyMonitor == -1){
-    m_i2c.Read(myAddress, numOfBytes, arrayToSave); 
+	  lidar_read(myAddress, arrayToSave, numOfBytes);
+//    m_i2c.Read(myAddress, numOfBytes, arrayToSave);
+  } else {
+//	  printf("\tsensor reading fail\n");
   }
+  printf("t");
+//  printf("\tbyte1:%x ", arrayToSave[0]);
+//  printf("byte2:%x\n", arrayToSave[1]);
 
 } /* LIDARLite_I2C::read */
 
-bool LIDARLite_I2C::getBit(byte input, int position){
-  return (input >> position) & 0x1;
+int LIDARLite_I2C::getBit(uint8_t input, int position){
+	return ((input >> position) & 0x1)? 1 : 0;
 }/* LIDARLite_I2C::getBit */
+
+void LIDARLite_I2C::lidar_write(uint8_t dev_register, uint8_t * dataToSend, int sendSize){
+	uint8_t buffer[sendSize + 1];
+	buffer[0] = dev_register;
+	for(int i = 1; i < sendSize + 1; i++){
+		buffer[i] = dataToSend[i - 1];
+	}
+	m_i2c.Transaction(buffer, sendSize + 1, NULL, 0);
+}
+
+void LIDARLite_I2C::lidar_read(uint8_t dev_register, uint8_t * dataReceived, int receiveSize){
+//	lidar_write(dev_register, NULL, 0);
+	m_i2c.Transaction(&dev_register, 1, dataReceived, receiveSize);
+}
 
 std::string LIDARLite_I2C::GetSmartDashboardType() const {
   return "LIDARLite_v3";
@@ -206,8 +252,16 @@ void LIDARLite_I2C::InitTable(std::shared_ptr<ITable> subtable) {
 }
 
 void LIDARLite_I2C::UpdateTable() {
-  m_table->PutNumber("Bias_Correct_Distance", distance(true));
-  m_table->PutNumber("Biased_Distance", distance(false));
+  int newDist = distance(true);
+  m_table->PutNumber("Bias_Correct_Distance", newDist);
+  m_table->PutNumber("LIDARLite_busyFlag", deviceBusy);
+  m_table->PutNumber("LIDARLite_referenceOverflow", referenceOverflow);
+  m_table->PutNumber("LIDARLite_signalOverflow", signalOverflow);
+  m_table->PutNumber("LIDARLite_invalidSignal", invalidSignal);
+  m_table->PutNumber("LIDARLite_secondaryValid", secondaryReturnValid);
+  m_table->PutNumber("LIDARLite_sensorHealth", sensorHealth);
+  m_table->PutNumber("LIDARLite_processError", processError);
+//  m_table->PutNumber("Biased_Distance", distance(false));
 }
 
 std::shared_ptr<ITable> LIDARLite_I2C::GetTable() const { return m_table; }

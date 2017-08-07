@@ -9,6 +9,9 @@
 
 #include <I2C.h>
 #include <LIDARLiteRio.h>
+#include <CANTalon.h>
+#include <unistd.h>
+
 
 
 class Robot: public frc::IterativeRobot {
@@ -17,11 +20,14 @@ public:
 		chooser.AddDefault(autoNameDefault, autoNameDefault);
 		chooser.AddObject(autoNameCustom, autoNameCustom);
 		frc::SmartDashboard::PutData("Auto Modes", &chooser);
+		lw->AddSensor("Lidar", lidar->GetSmartDashboardType(), lidar);
+//		frc::SmartDashboard::PutData("LIDARLite", );
 	}
 
 	void RobotPeriodic(){
 		SmartDashboard::PutNumber("nonbias_distance", lidar->distance(true));
-		SmartDashboard::PutNumber("bias_distance", lidar->distance(false));
+		//usleep(20000);
+//		SmartDashboard::PutNumber("bias_distance", lidar->distance(false));
 	}
 
 	/*
@@ -65,6 +71,7 @@ public:
 
 	void TestPeriodic() {
 		lw->Run();
+		printf("%d\n", lidar->distance());
 	}
 
 private:
@@ -74,6 +81,7 @@ private:
 	const std::string autoNameDefault = "Default";
 	const std::string autoNameCustom = "My Auto";
 	std::string autoSelected;
+	CANTalon * test = new CANTalon(1);
 };
 
 START_ROBOT_CLASS(Robot)

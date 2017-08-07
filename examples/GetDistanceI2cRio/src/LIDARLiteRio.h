@@ -35,8 +35,6 @@
 #include "I2C.h"
 #include "LiveWindow/LiveWindowSendable.h"
 
-typedef unsigned char byte;    // 8-bit unsigned entity.
-
 namespace frc {
 
 /**
@@ -56,6 +54,14 @@ class LIDARLite_I2C : public LiveWindowSendable {
   static const int kStatusRegister = 0x01;
   static const int kDistanceRegister = 0x8f;
 
+  static const int kStatusFlag_Busy = 0;
+  static const int kStatusFlag_ReferenceOverflow = 1;
+  static const int kStatusFlag_SignalOverflow = 2;
+  static const int kStatusFlag_InvalidSignal = 3;
+  static const int kStatusFlag_SecondaryReturn = 4;
+  static const int kStatusFlag_Health = 5;
+  static const int kStatusFlag_ProcessError = 6;
+
  public:
   LIDARLite_I2C(I2C::Port port, int deviceAddress = kAddress, int configuration = 0);
   virtual ~LIDARLite_I2C() = default;
@@ -65,10 +71,14 @@ class LIDARLite_I2C : public LiveWindowSendable {
 
   void configure(int configuration = 0);
   void reset();
+  void updateStatus();
   int distance(bool biasCorrection = true);
-  void read(int myAddress, int numOfBytes, byte* arrayToSave, bool monitorBusyFlag);
+  void read(int myAddress, int numOfBytes, uint8_t * arrayToSave, bool monitorBusyFlag);
 
-  bool getBit(byte input, int position);
+  void lidar_write(uint8_t dev_register, uint8_t * dataToSend, int sendSize);
+  void lidar_read(uint8_t dev_register, uint8_t * dataReceived, int receiveSize);
+
+  int getBit(uint8_t input, int position);
 
   std::string GetSmartDashboardType() const override;
   void InitTable(std::shared_ptr<ITable> subtable) override;
@@ -82,6 +92,8 @@ class LIDARLite_I2C : public LiveWindowSendable {
 
  private:
   std::shared_ptr<ITable> m_table;
+  uint8_t status;
+  int deviceBusy, referenceOverflow, signalOverflow, invalidSignal, secondaryReturnValid, sensorHealth, processError;
 };
 
 }  // namespace frc
